@@ -147,7 +147,7 @@ nome_logo = "novus.gif"
 logo_b64 = carregar_imagem_base64(nome_logo)
 
 # ==========================================
-# 5. SPLASH SCREEN (ANIMAÇÃO DE CARREGAMENTO INICIAL)
+# 5. SPLASH SCREEN E FUNÇÕES DE ARQUIVO
 # ==========================================
 if "splash_exibido" not in st.session_state:
     st.session_state["splash_exibido"] = False
@@ -214,6 +214,14 @@ df_exemplo = pd.DataFrame({
 })
 csv_exemplo = df_exemplo.to_csv(index=False).encode('utf-8')
 
+# --- GERADOR DO PDF DE EXEMPLO ---
+pdf_demo = PDF()
+pdf_demo.add_page()
+pdf_demo.chapter_title("ESTRUTURA DE EXEMPLO - RELATORIO NOVUS AI")
+pdf_demo.chapter_body("Este e apenas um documento visual de demonstracao.\n\nAo processar sua planilha real e confirmar o pagamento, nossa Inteligencia Artificial gerara um relatorio executivo profundo focado estritamente nos dados do seu negocio, contendo:\n\n- Pilar 1: Tracao e Escala (Onde investir pesado hoje)\n- Pilar 2: Reestruturacao de Prejuizos (Onde estao seus gargalos operacionais)\n- Pilar 3: Otimizacao de Portfolio (Quais produtos manter ou eliminar)\n\nFaca o upload do seu CSV real, preencha seus dados e descubra o seu Lucro Oculto!")
+pdf_demo.output("Demo_NOVUS_AI.pdf")
+with open("Demo_NOVUS_AI.pdf", "rb") as f_demo:
+    pdf_demo_bytes = f_demo.read()
 
 # ==========================================
 # 6. BARRA LATERAL (SIDEBAR LIMPA)
@@ -286,9 +294,12 @@ with aba_auditoria:
     with col_up1:
         arquivo_cliente = st.file_uploader("Selecione sua planilha de vendas (.csv)", type=["csv"])
     with col_up2:
-        st.markdown("<div style='margin-top: 32px;'></div>", unsafe_allow_html=True)
+        st.markdown("<div style='margin-top: 15px;'></div>", unsafe_allow_html=True)
         st.markdown("<div class='btn-secundario'>", unsafe_allow_html=True)
         st.download_button(label="Baixar CSV de Exemplo", data=csv_exemplo, file_name="exemplo_vendas.csv", mime="text/csv", use_container_width=True)
+        
+        st.markdown("<div style='margin-top: 8px;'></div>", unsafe_allow_html=True)
+        st.download_button(label="Baixar Relatório Fictício", data=pdf_demo_bytes, file_name="Exemplo_Relatorio_NOVUS.pdf", mime="application/pdf", use_container_width=True)
         st.markdown("</div>", unsafe_allow_html=True)
 
     if arquivo_cliente is not None:
@@ -391,7 +402,6 @@ with aba_auditoria:
 
                     st.write("Processando cruzamento avançado de margens...")
                     
-                    # LIMITE DE DADOS (HEAD 30) ATUALIZADO AQUI
                     dados_texto = tabela.head(30).to_string()
                     
                     prompt_analista = f"EM PORTUGUÊS DO BRASIL: Analise esta base de dados rigorosamente: {dados_texto}. 1. Apresente os KPIs de Lucro e Margem % em formato de lista (bullet points). 2. Classifique o portfólio usando a Matriz BCG adaptada. Retorne um diagnóstico profundo."
@@ -420,6 +430,7 @@ with aba_auditoria:
                         pdf.image(grafico_temp, x=10, w=190)
                         os.remove(grafico_temp)
                     
+                    # O PDF real continua sendo gerado internamente e salvo na máquina, mas não é exposto
                     pdf.output("NOVUS_AI_Estrategia.pdf")
                     
                     status.update(label="**Auditoria Concluída com Sucesso!**", state="complete", expanded=False)
@@ -439,12 +450,15 @@ with aba_auditoria:
                 </div>
                 """, unsafe_allow_html=True)
                 
-                st.link_button("Desbloquear Plano Completo — R$ 97,00", url="https://link.mercadopago.com.br/novusai", use_container_width=True)
+                # NOVO LINK INTEGRADO COM PREÇO FIXO
+                st.link_button("💳 Desbloquear Plano Completo — R$ 97,00", url="https://mpago.la/24nVsGh", use_container_width=True)
                 
-                st.markdown("<div class='btn-secundario'>", unsafe_allow_html=True)
-                with open("NOVUS_AI_Estrategia.pdf", "rb") as f:
-                    st.download_button("Baixar Relatório (Admin / Teste)", data=f.read(), file_name="NOVUS_AI_Estrategia.pdf", mime="application/pdf")
-                st.markdown("</div>", unsafe_allow_html=True)
+                st.markdown("""
+                <div style="background-color: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.2); border-radius: 8px; padding: 16px; margin-top: 15px; text-align: center;">
+                    <p style="color: #22C55E; font-size: 14px; font-weight: 600; margin-bottom: 5px;">✅ Seu relatório neural está processado e salvo de forma segura.</p>
+                    <p style="color: #94A3B8; font-size: 13px; margin: 0;">Assim que o pagamento for confirmado, nossa equipe enviará o PDF executivo automaticamente para o seu <b>E-mail</b> e <b>WhatsApp</b> cadastrados.</p>
+                </div>
+                """, unsafe_allow_html=True)
 
 # ==========================================
 # 7. RODAPÉ INTERATIVO
