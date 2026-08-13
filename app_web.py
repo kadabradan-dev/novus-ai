@@ -363,7 +363,6 @@ with aba_auditoria:
 
                 with st.status("**Inicializando Rede Neural Executiva...**", expanded=True) as status:
                     
-                    # CORREÇÃO DEFINITIVA DE COMPATIBILIDADE NA NUVEM
                     if os.environ.get("GROQ_API_KEY"):
                         st.write("Conectando à API da Groq (Nuvem)...")
                         chave_groq = os.environ.get("GROQ_API_KEY")
