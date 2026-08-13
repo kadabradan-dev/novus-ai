@@ -366,12 +366,11 @@ with aba_auditoria:
                     # CORREÇÃO DEFINITIVA DE COMPATIBILIDADE NA NUVEM
                     if os.environ.get("GROQ_API_KEY"):
                         st.write("Conectando à API da Groq (Nuvem)...")
-                        os.environ["GROQ_API_KEY"] = os.environ.get("GROQ_API_KEY")
-                        # Forçando a sintaxe limpa compatível com LiteLLM/Groq
-                        modelo_local = "groq/llama-3.1-70b-versatile"
+                        chave_groq = os.environ.get("GROQ_API_KEY")
+                        modelo_local = LLM(model="groq/llama-3.1-70b-versatile", api_key=chave_groq)
                     else:
                         st.write("Conectando ao LLM local (Ollama / Llama 3)...")
-                        modelo_local = "ollama/llama3"
+                        modelo_local = LLM(model="ollama/llama3", base_url="http://localhost:11434")
 
                     st.write("Acordando Agente Analista Financeiro...")
                     instrucao_mestre = (
