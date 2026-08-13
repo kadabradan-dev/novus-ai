@@ -366,7 +366,8 @@ with aba_auditoria:
                     if os.environ.get("GROQ_API_KEY"):
                         st.write("Conectando à API da Groq (Nuvem)...")
                         chave_groq = os.environ.get("GROQ_API_KEY")
-                        modelo_local = LLM(model="groq/llama-3.1-70b-versatile", api_key=chave_groq)
+                        # MODELO ATUALIZADO AQUI
+                        modelo_local = LLM(model="groq/llama3-70b-8192", api_key=chave_groq)
                     else:
                         st.write("Conectando ao LLM local (Ollama / Llama 3)...")
                         modelo_local = LLM(model="ollama/llama3", base_url="http://localhost:11434")
@@ -383,7 +384,9 @@ with aba_auditoria:
                     consultor = Agent(role="Estrategista C-Level", goal="Gerar plano de ação executivo com base nos dados.", backstory=instrucao_mestre, llm=modelo_local)
 
                     st.write("Processando cruzamento avançado de margens...")
-                    dados_texto = tabela.to_string()
+                    
+                    # LIMITE DE DADOS (HEAD 30) ATUALIZADO AQUI
+                    dados_texto = tabela.head(30).to_string()
                     
                     prompt_analista = f"EM PORTUGUÊS DO BRASIL: Analise esta base de dados rigorosamente: {dados_texto}. 1. Apresente os KPIs de Lucro e Margem % em formato de lista (bullet points). 2. Classifique o portfólio usando a Matriz BCG adaptada. Retorne um diagnóstico profundo."
                     t1 = Task(description=prompt_analista, expected_output="Diagnóstico financeiro em português.", agent=analista)
