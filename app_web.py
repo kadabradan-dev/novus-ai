@@ -365,7 +365,10 @@ with aba_auditoria:
                     
                     if os.environ.get("GROQ_API_KEY"):
                         st.write("Conectando à API da Groq (Nuvem)...")
-                        modelo_local = LLM(model="groq/llama-3.1-70b-versatile")
+                        import os
+from crewai import LLM
+
+modelo_local = LLM(model="groq/llama-3.1-70b-versatile", api_key=os.environ.get("GROQ_API_KEY"))
                     else:
                         st.write("Conectando ao LLM local (Ollama / Llama 3)...")
                         modelo_local = LLM(model="ollama/llama3", base_url="http://localhost:11434")
