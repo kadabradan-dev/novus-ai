@@ -367,7 +367,7 @@ with aba_auditoria:
                         st.write("Conectando à API da Groq (Nuvem)...")
                         chave_groq = os.environ.get("GROQ_API_KEY")
                         # MODELO ATUALIZADO AQUI
-                        modelo_local = LLM(model="groq/llama3-70b-8192", api_key=chave_groq)
+                        modelo_local = LLM(model="groq/llama-3.1-8b-instant", api_key=chave_groq)
                     else:
                         st.write("Conectando ao LLM local (Ollama / Llama 3)...")
                         modelo_local = LLM(model="ollama/llama3", base_url="http://localhost:11434")
