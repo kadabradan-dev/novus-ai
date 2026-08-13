@@ -53,6 +53,12 @@ ICO_CURSOR = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke
 ICO_ROCKET = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#FF8A00" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 4px; margin-bottom: 2px;"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2l.5-.5a2.5 2.5 0 0 0 1.96-3.96l5-5c1.26-1.5 2-5 2-5s-3.74.5-5 2l-5 5a2.5 2.5 0 0 0-3.96 1.96l-.5.5z"/></svg>'
 ICO_TARGET = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#FF8A00" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 4px; margin-bottom: 2px;"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>'
 ICO_LOCK_SM = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#FF8A00" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 4px; margin-bottom: 2px;"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>'
+ICO_MP = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#E2E8F0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 8px;"><rect x="14" y="14" width="8" height="6" fill="#009EE3" stroke="none" opacity="0.8"/><rect x="2" y="5" width="20" height="14" rx="2" ry="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>'
+
+# ÍCONES PARA AS CAIXAS DE ALERTA CUSTOMIZADAS
+ICO_SUCCESS_BRAND = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#E2E8F0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle;"><circle cx="16" cy="16" r="6" fill="#22C55E" stroke="none" opacity="0.8"/><circle cx="12" cy="12" r="10"/><polyline points="16 10 11 15 8 12"/></svg>'
+ICO_ALERT_BRAND = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#E2E8F0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle;"><circle cx="12" cy="18" r="4" fill="#FF8A00" stroke="none" opacity="0.8"/><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>'
+ICO_ERROR_BRAND = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#E2E8F0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle;"><circle cx="16" cy="16" r="6" fill="#FF007A" stroke="none" opacity="0.8"/><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>'
 
 # ==========================================
 # 4. INJEÇÃO DE CSS
@@ -561,16 +567,36 @@ with aba_auditoria:
             
             # LIBERAÇÃO POR URL AUTOMÁTICA, POR SENHA OU MODO ADMIN OCULTO COM MENSAGEM DE MANUTENÇÃO PARA ENVIO
             if pagamento_aprovado_url or codigo_digitado == "NOVUS97" or nome_lead.strip() == "AdminNovus@93":
-                st.success("✅ Pagamento Aprovado / Acesso Liberado!")
+                
+                # CAIXA DE SUCESSO CUSTOMIZADA
+                st.markdown(f"""
+                <div style="background-color: #13131A; border: 1px solid #22C55E; padding: 16px; border-radius: 8px; color: #E2E8F0; display: flex; align-items: center; margin-bottom: 20px; box-shadow: 0 4px 12px rgba(34, 197, 94, 0.1);">
+                    <div style="margin-right: 12px;">{ICO_SUCCESS_BRAND}</div>
+                    <div style="font-size: 15px;"><strong>Pagamento Aprovado / Acesso Liberado!</strong></div>
+                </div>
+                """, unsafe_allow_html=True)
+                
                 st.markdown("<div class='btn-secundario'>", unsafe_allow_html=True)
                 st.download_button(label="Baixar Relatório Oficial (PDF)", data=st.session_state.pdf_gerado_bytes, file_name="NOVUS_AI_Oficial.pdf", mime="application/pdf", use_container_width=True)
                 st.markdown("</div>", unsafe_allow_html=True)
                 
                 if pref_entrega != "Baixar direto na plataforma agora":
-                    st.info("🚧 **Aviso:** O recurso de envio automático para o seu " + pref_entrega.split()[-1] + " está passando por atualizações em nossos servidores neste momento. Por favor, utilize o botão acima para garantir o download do seu documento imediatamente.")
+                    # CAIXA DE AVISO (INFO) CUSTOMIZADA
+                    st.markdown(f"""
+                    <div style="background-color: #13131A; border: 1px solid #FF8A00; padding: 16px; border-radius: 8px; color: #E2E8F0; display: flex; align-items: flex-start; margin-top: 20px; box-shadow: 0 4px 12px rgba(255, 138, 0, 0.1);">
+                        <div style="margin-right: 12px; margin-top: 2px;">{ICO_ALERT_BRAND}</div>
+                        <div style="line-height: 1.5; font-size: 14px;"><strong>Aviso:</strong> O recurso de envio automático para o seu {pref_entrega.split()[-1]} está passando por atualizações em nossos servidores neste momento. Por favor, utilize o botão acima para garantir o download do seu documento imediatamente.</div>
+                    </div>
+                    """, unsafe_allow_html=True)
             
             elif codigo_digitado:
-                st.error("❌ Código inválido ou pagamento pendente. Verifique seu comprovante.")
+                # CAIXA DE ERRO CUSTOMIZADA
+                st.markdown(f"""
+                <div style="background-color: #13131A; border: 1px solid #FF007A; padding: 16px; border-radius: 8px; color: #E2E8F0; display: flex; align-items: center; margin-bottom: 20px; box-shadow: 0 4px 12px rgba(255, 0, 122, 0.1);">
+                    <div style="margin-right: 12px;">{ICO_ERROR_BRAND}</div>
+                    <div style="font-size: 14px;"><strong>Código inválido ou pagamento pendente.</strong> Verifique seu comprovante.</div>
+                </div>
+                """, unsafe_allow_html=True)
 
 # ==========================================
 # 7. RODAPÉ INTERATIVO
@@ -582,6 +608,7 @@ html_rodape = (
     f'<div class="badge" style="margin-bottom: 0; min-width: 200px;">{ICO_CHECK}<div><b>Ambiente Seguro</b><br><span style="font-size:10px; color:#64748B;">Criptografia SSL de ponta a ponta</span></div></div>'
     f'<div class="badge" style="margin-bottom: 0; min-width: 200px;">{ICO_SHIELD}<div><b>Proteção LGPD</b><br><span style="font-size:10px; color:#64748B;">Conformidade total com a lei</span></div></div>'
     f'<div class="badge" style="margin-bottom: 0; min-width: 200px;">{ICO_STAR}<div><b>Qualidade Verificada</b><br><span style="font-size:10px; color:#64748B;">Auditoria avançada por IA</span></div></div>'
+    f'<div class="badge" style="margin-bottom: 0; min-width: 200px;">{ICO_MP}<div><b>Pagamento Oficial</b><br><span style="font-size:10px; color:#64748B;">Processado por Mercado Pago</span></div></div>'
     '</div>'
 )
 st.markdown(html_rodape, unsafe_allow_html=True)
