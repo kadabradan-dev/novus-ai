@@ -367,6 +367,7 @@ with aba_auditoria:
                     if os.environ.get("GROQ_API_KEY"):
                         st.write("Conectando à API da Groq (Nuvem)...")
                         os.environ["GROQ_API_KEY"] = os.environ.get("GROQ_API_KEY")
+                        # Forçando a sintaxe limpa compatível com LiteLLM/Groq
                         modelo_local = "groq/llama-3.1-70b-versatile"
                     else:
                         st.write("Conectando ao LLM local (Ollama / Llama 3)...")
