@@ -3,7 +3,7 @@ import csv
 from datetime import datetime
 import os
 import time
-from crewai import Agent, Crew, Process, Task
+from crewai import Agent, Crew, Process, Task, LLM
 from fpdf import FPDF
 import pandas as pd
 import streamlit as st
