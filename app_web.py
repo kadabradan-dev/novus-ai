@@ -212,13 +212,102 @@ df_exemplo = pd.DataFrame({
     "Receita Total": [145000.00, 80000.00, 92000.00, 50000.00, 42000.00, 40000.00, 25000.00],
     "Custo Total": [30000.00, 20000.00, 15000.00, 45000.00, 38000.00, 8000.00, 28000.00]
 })
-csv_exemplo = df_exemplo.to_csv(index=False).encode('utf-8')
 
-# --- GERADOR DO PDF DE EXEMPLO ---
+df_exemplo['Lucro Líquido'] = df_exemplo['Receita Total'] - df_exemplo['Custo Total']
+df_exemplo['Margem (%)'] = (df_exemplo['Lucro Líquido'] / df_exemplo['Receita Total']) * 100
+df_exemplo = df_exemplo.sort_values(by='Lucro Líquido', ascending=False).reset_index(drop=True)
+
+# --- GERADOR DO GRÁFICO E PDF DE EXEMPLO ---
+fig_demo, ax1_demo = plt.subplots(figsize=(12, 7))
+ax2_demo = ax1_demo.twinx()
+x_demo = np.arange(len(df_exemplo['Produto']))
+width_demo = 0.35
+
+bar1_demo = ax1_demo.bar(x_demo - width_demo/2, df_exemplo['Receita Total'], width_demo, label='Receita Bruta', color='#FF8A00', edgecolor='white', linewidth=1)
+bar2_demo = ax1_demo.bar(x_demo + width_demo/2, df_exemplo['Custo Total'], width_demo, label='Custo Total', color='#FF007A', edgecolor='white', linewidth=1)
+line1_demo = ax2_demo.plot(x_demo, df_exemplo['Margem (%)'], color='#22C55E', marker='o', linewidth=2.5, markersize=8, label='Margem de Lucro (%)')
+
+ax1_demo.set_ylabel('Valor Financeiro (R$)', fontweight='bold', color='#334155')
+ax2_demo.set_ylabel('Margem de Lucro (%)', fontweight='bold', color='#22C55E')
+ax1_demo.set_title('Auditoria de Rentabilidade: Ordem de Lucratividade (EXEMPLO)', fontsize=16, fontweight='900', color='#0F172A', pad=15)
+ax1_demo.set_xticks(x_demo)
+ax1_demo.set_xticklabels(df_exemplo['Produto'], rotation=45, ha='right', fontsize=9, fontweight='600')
+ax1_demo.grid(axis='y', linestyle='--', alpha=0.3)
+
+def autolabel_demo(rects, ax):
+    for rect in rects:
+        height = rect.get_height()
+        ax.annotate(f'R${height/1000:.0f}k',
+                    xy=(rect.get_x() + rect.get_width() / 2, height),
+                    xytext=(0, 3), textcoords="offset points",
+                    ha='center', va='bottom', fontsize=8, fontweight='bold', color='#334155')
+autolabel_demo(bar1_demo, ax1_demo)
+autolabel_demo(bar2_demo, ax1_demo)
+
+lines_1_demo, labels_1_demo = ax1_demo.get_legend_handles_labels()
+lines_2_demo, labels_2_demo = ax2_demo.get_legend_handles_labels()
+ax1_demo.legend(lines_1_demo + lines_2_demo, labels_1_demo + labels_2_demo, loc='upper right', frameon=True, shadow=True)
+
+plt.tight_layout()
+grafico_demo_temp = "grafico_demo_temp.png"
+fig_demo.savefig(grafico_demo_temp, dpi=300, bbox_inches='tight', facecolor='#F8FAFC')
+plt.close(fig_demo)
+
 pdf_demo = PDF()
 pdf_demo.add_page()
-pdf_demo.chapter_title("ESTRUTURA DE EXEMPLO - RELATORIO NOVUS AI")
-pdf_demo.chapter_body("Este e apenas um documento visual de demonstracao.\n\nAo processar sua planilha real e confirmar o pagamento, nossa Inteligencia Artificial gerara um relatorio executivo profundo focado estritamente nos dados do seu negocio, contendo:\n\n- Pilar 1: Tracao e Escala (Onde investir pesado hoje)\n- Pilar 2: Reestruturacao de Prejuizos (Onde estao seus gargalos operacionais)\n- Pilar 3: Otimizacao de Portfolio (Quais produtos manter ou eliminar)\n\nFaca o upload do seu CSV real, preencha seus dados e descubra o seu Lucro Oculto!")
+pdf_demo.chapter_title("AVISO IMPORTANTE: DOCUMENTO DE EXEMPLO")
+texto_aviso = "Este relatorio e uma demonstracao gerada previamente. O documento final processado pela nossa Inteligencia Artificial sera 100% focado na sua base de dados, e as acoes estrategicas descritas podem variar drasticamente conforme o foco, nicho e estado financeiro real da sua empresa. Use isto apenas como referencia visual de estrutura.\n\n"
+pdf_demo.chapter_body(texto_aviso)
+
+pdf_demo.chapter_title("1. SUMARIO EXECUTIVO & ESTRATEGIA C-LEVEL")
+texto_exemplo = """Resumo Executivo & Plano de Ação Tático
+
+Prezados membros da Diretoria e CEO,
+
+Em resposta ao diagnóstico executado pelo nosso Analista, apresentamos este Plano de Ação Tático, que tem como objetivo estratégico maximizar a rentabilidade do portfólio de produtos e serviços. 
+
+Pilar 1: Tração e Escala
+A primeira prioridade é investir e consolidar os produtos de maior potencial de crescimento, como o Licença Software SaaS e a Mentoria Gravada (Online). Esses produtos apresentaram margens de contribuição altas (79,31% e 83,70%, respectivamente) e podem ser considerados como "Estrelas" da matriz BCG.
+- Investir em marketing e promoção para ampliar a base de clientes desses produtos.
+- Implementar estratégias de upselling e cross-selling.
+- Ajustar os preços desses produtos de forma a equilibrar a demanda com a oferta.
+
+Pilar 2: Reestruturação (Turnaround) de Prejuízos
+Alguns produtos apresentaram prejuízos ou margens de contribuição baixas, como o Suporte Técnico Mensal e o Setup Manual de Sistemas.
+- Realizar uma análise detalhada dos custos e receitas desses produtos.
+- Implementar processos de melhoria contínua para reduzir os custos.
+- Desenvolver novos produtos ou serviços relacionados a esses produtos.
+
+Pilar 3: Otimização de Portfólio
+É fundamental avaliar a viabilidade de continuar com os produtos menos rentáveis, como a Implantação de E-commerce, que apresentou uma margem de contribuição negativa (-12%).
+- Realizar uma análise cuidadosa dos custos e receitas para decidir a continuidade.
+- Desenvolver estratégias para substituir esses produtos por novos.
+- Ajustar o portfólio para se concentrar em produtos mais rentáveis.
+
+Ações Específicas
+- Investir R$ 50.000,00 no marketing e promoção dos produtos Estrela.
+- Realizar uma análise detalhada dos custos e receitas dos produtos com prejuízos.
+- Descontinuar o produto com margem de contribuição negativa.
+
+Timeline
+- Mês 1 a 3: Implementar as ações do Pilar 1 (Tração e Escala).
+- Mês 3 a 6: Análise e reestruturação operacional (Turnaround).
+- Mês 6 a 9: Otimização e descontinuidade de produtos deficitários.
+
+Respeitosamente,
+Estrategista C-Level
+"""
+pdf_demo.chapter_body(texto_exemplo.encode('latin-1', 'replace').decode('latin-1'))
+
+pdf_demo.add_page()
+pdf_demo.chapter_title("2. MATRIZ FINANCEIRA E MAPEAMENTO DE GARGALOS")
+texto_matriz = "O painel analitico abaixo cruza a Receita Bruta, o Custo Total e a Linha de Tendencia da Margem de Lucro (%). Produtos ordenados automaticamente da maior para a menor lucratividade, facilitando a identificacao de ativos 'Estrela' e gargalos operacionais ('Abacaxis').\n\n"
+pdf_demo.chapter_body(texto_matriz)
+
+if os.path.exists(grafico_demo_temp):
+    pdf_demo.image(grafico_demo_temp, x=10, w=190)
+    os.remove(grafico_demo_temp)
+
 pdf_demo.output("Demo_NOVUS_AI.pdf")
 with open("Demo_NOVUS_AI.pdf", "rb") as f_demo:
     pdf_demo_bytes = f_demo.read()
@@ -294,12 +383,9 @@ with aba_auditoria:
     with col_up1:
         arquivo_cliente = st.file_uploader("Selecione sua planilha de vendas (.csv)", type=["csv"])
     with col_up2:
-        st.markdown("<div style='margin-top: 15px;'></div>", unsafe_allow_html=True)
+        st.markdown("<div style='margin-top: 32px;'></div>", unsafe_allow_html=True)
         st.markdown("<div class='btn-secundario'>", unsafe_allow_html=True)
-        st.download_button(label="Baixar CSV de Exemplo", data=csv_exemplo, file_name="exemplo_vendas.csv", mime="text/csv", use_container_width=True)
-        
-        st.markdown("<div style='margin-top: 8px;'></div>", unsafe_allow_html=True)
-        st.download_button(label="Baixar Relatório Fictício", data=pdf_demo_bytes, file_name="Exemplo_Relatorio_NOVUS.pdf", mime="application/pdf", use_container_width=True)
+        st.download_button(label="Baixar Relatório de Exemplo", data=pdf_demo_bytes, file_name="Exemplo_Relatorio_NOVUS.pdf", mime="application/pdf", use_container_width=True)
         st.markdown("</div>", unsafe_allow_html=True)
 
     if arquivo_cliente is not None:
@@ -450,7 +536,6 @@ with aba_auditoria:
                 </div>
                 """, unsafe_allow_html=True)
                 
-                # NOVO LINK INTEGRADO COM PREÇO FIXO
                 st.link_button("💳 Desbloquear Plano Completo — R$ 97,00", url="https://mpago.la/24nVsGh", use_container_width=True)
                 
                 st.markdown("""
