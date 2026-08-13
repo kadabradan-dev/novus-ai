@@ -28,7 +28,17 @@ st.set_page_config(
 )
 
 # ==========================================
-# 2. DESIGN SYSTEM: ÍCONES SVG TWO-TONE
+# 2. CONTROLE DE MEMÓRIA (SESSION STATE)
+# ==========================================
+if "splash_exibido" not in st.session_state:
+    st.session_state.splash_exibido = False
+if "relatorio_pronto" not in st.session_state:
+    st.session_state.relatorio_pronto = False
+if "pdf_gerado_bytes" not in st.session_state:
+    st.session_state.pdf_gerado_bytes = None
+
+# ==========================================
+# 3. DESIGN SYSTEM: ÍCONES SVG TWO-TONE
 # ==========================================
 ICO_CHART = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#E2E8F0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 8px; margin-bottom: 2px;"><rect x="10" y="10" width="10" height="10" fill="#FF8A00" stroke="none" opacity="0.8"/><rect x="3" y="4" width="14" height="14" rx="2"/><path d="M7 18V10M11 18V6"/></svg>'
 ICO_PROCESS = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#E2E8F0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 8px; margin-bottom: 2px;"><circle cx="16" cy="16" r="6" fill="#FF007A" stroke="none" opacity="0.8"/><path d="M12 3L5 13h7l-2 8 9-11h-7z"/></svg>'
@@ -45,7 +55,7 @@ ICO_TARGET = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke
 ICO_LOCK_SM = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#FF8A00" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 4px; margin-bottom: 2px;"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>'
 
 # ==========================================
-# 3. INJEÇÃO DE CSS: ESTILOS E COMPONENTES
+# 4. INJEÇÃO DE CSS
 # ==========================================
 st.markdown(
     """
@@ -136,7 +146,7 @@ st.markdown(
 )
 
 # ==========================================
-# 4. CARREGAMENTO DE IMAGENS E CLASSE PDF 
+# 5. CARREGAMENTO DE IMAGENS E CLASSE PDF 
 # ==========================================
 def carregar_imagem_base64(caminho):
     try:
@@ -145,12 +155,6 @@ def carregar_imagem_base64(caminho):
 
 nome_logo = "novus.gif"
 logo_b64 = carregar_imagem_base64(nome_logo)
-
-# ==========================================
-# 5. SPLASH SCREEN E FUNÇÕES DE ARQUIVO
-# ==========================================
-if "splash_exibido" not in st.session_state:
-    st.session_state["splash_exibido"] = False
 
 if not st.session_state["splash_exibido"]:
     placeholder_splash = st.empty()
@@ -408,8 +412,8 @@ with aba_auditoria:
 
         st.markdown("<br>", unsafe_allow_html=True)
         
-        st.markdown("<h3 style='font-weight: 800; font-size: 20px;'>Identificação do Executivo</h3>", unsafe_allow_html=True)
-        st.markdown("<p style='color: #94A3B8; font-size: 13px;'>Preencha seus dados para liberar o processamento neural da sua auditoria:</p>", unsafe_allow_html=True)
+        st.markdown("<h3 style='font-weight: 800; font-size: 20px;'>Liberação da Auditoria</h3>", unsafe_allow_html=True)
+        st.markdown("<p style='color: #94A3B8; font-size: 13px;'>Preencha seus dados de contato e escolha como quer receber o documento final:</p>", unsafe_allow_html=True)
         
         col_l1, col_l2, col_l3 = st.columns(3)
         with col_l1:
@@ -418,7 +422,9 @@ with aba_auditoria:
             email_lead = st.text_input("Seu E-mail Corporativo", placeholder="Ex: carlos@empresa.com")
         with col_l3:
             whats_lead = st.text_input("Seu WhatsApp", placeholder="Ex: (11) 99999-9999")
-
+            
+        st.markdown("<br>", unsafe_allow_html=True)
+        pref_entrega = st.radio("Como prefere receber o relatório após a liberação?", ["Baixar direto na plataforma agora", "Receber cópia por E-mail", "Receber cópia no WhatsApp"], horizontal=True)
         st.markdown("<br>", unsafe_allow_html=True)
         
         if st.button("Iniciar Processamento Neural", use_container_width=True):
@@ -516,34 +522,54 @@ with aba_auditoria:
                         pdf.image(grafico_temp, x=10, w=190)
                         os.remove(grafico_temp)
                     
-                    # O PDF real continua sendo gerado internamente e salvo na máquina, mas não é exposto
                     pdf.output("NOVUS_AI_Estrategia.pdf")
-                    
+                    with open("NOVUS_AI_Estrategia.pdf", "rb") as f_real:
+                        st.session_state.pdf_gerado_bytes = f_real.read()
+                        
+                    st.session_state.relatorio_pronto = True
                     status.update(label="**Auditoria Concluída com Sucesso!**", state="complete", expanded=False)
 
-                st.markdown(f"""
-                <div style="position: relative; margin-top: 30px; margin-bottom: 20px; border-radius: 12px; overflow: hidden; border: 1px solid #1E1E26;">
-                    <div style="filter: blur(6px); opacity: 0.4; background: linear-gradient(180deg, #13131A 0%, #050508 100%); height: 180px; display: flex; align-items: center; justify-content: center; padding: 20px; font-family: monospace; color: #94A3B8; user-select: none; line-height: 1.6;">
-                        [DADOS CONFIDENCIAIS OCULTOS]<br><br>
-                        Estratégia traçada para otimização de margens de lucro com base nos dados cruzados.<br>
-                        Foi detectado que o produto [X] consome 80% da sua margem de contribuição.<br>
-                        Gráfico comparativo de Receita vs Custo gerado no anexo final do relatório...
-                    </div>
-                    <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; width: 100%;">
-                        <h3 style="color: #FFFFFF; font-weight: 900; margin: 0; text-shadow: 0px 4px 15px rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; gap: 10px;">{ICO_LOCK} Relatório Protegido</h3>
-                        <p style="color: #FF8A00; font-size: 14px; font-weight: 600; text-shadow: 0px 2px 10px rgba(0,0,0,0.8);">Gráficos Duplos e KPIs Finalizados</p>
-                    </div>
+        # SE O RELATÓRIO ESTIVER PRONTO, EXIBE O BLOCO DE PAGAMENTO / LIBERAÇÃO
+        if st.session_state.relatorio_pronto:
+            st.markdown(f"""
+            <div style="position: relative; margin-top: 30px; margin-bottom: 20px; border-radius: 12px; overflow: hidden; border: 1px solid #1E1E26;">
+                <div style="filter: blur(6px); opacity: 0.4; background: linear-gradient(180deg, #13131A 0%, #050508 100%); height: 180px; display: flex; align-items: center; justify-content: center; padding: 20px; font-family: monospace; color: #94A3B8; user-select: none; line-height: 1.6;">
+                    [DADOS CONFIDENCIAIS OCULTOS]<br><br>
+                    Estratégia traçada para otimização de margens de lucro com base nos dados cruzados.<br>
+                    Foi detectado que o produto [X] consome 80% da sua margem de contribuição.<br>
+                    Gráfico comparativo de Receita vs Custo gerado no anexo final do relatório...
                 </div>
-                """, unsafe_allow_html=True)
-                
-                st.link_button("💳 Desbloquear Plano Completo — R$ 97,00", url="https://mpago.la/24nVsGh", use_container_width=True)
-                
-                st.markdown("""
-                <div style="background-color: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.2); border-radius: 8px; padding: 16px; margin-top: 15px; text-align: center;">
-                    <p style="color: #22C55E; font-size: 14px; font-weight: 600; margin-bottom: 5px;">✅ Seu relatório neural está processado e salvo de forma segura.</p>
-                    <p style="color: #94A3B8; font-size: 13px; margin: 0;">Assim que o pagamento for confirmado, nossa equipe enviará o PDF executivo automaticamente para o seu <b>E-mail</b> e <b>WhatsApp</b> cadastrados.</p>
+                <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; width: 100%;">
+                    <h3 style="color: #FFFFFF; font-weight: 900; margin: 0; text-shadow: 0px 4px 15px rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; gap: 10px;">{ICO_LOCK} Relatório Protegido</h3>
+                    <p style="color: #FF8A00; font-size: 14px; font-weight: 600; text-shadow: 0px 2px 10px rgba(0,0,0,0.8);">Gráficos Duplos e KPIs Finalizados</p>
                 </div>
-                """, unsafe_allow_html=True)
+            </div>
+            """, unsafe_allow_html=True)
+            
+            st.link_button("💳 Pagar e Desbloquear Relatório Completo — R$ 97,00", url="https://mpago.la/24nVsGh", use_container_width=True)
+            
+            # CHECAGEM SE O MERCADO PAGO REDIRECIONOU DE VOLTA COM SUCESSO OU SE É O ADMIN
+            query_params = st.query_params
+            pagamento_aprovado_url = query_params.get("pagamento") == "aprovado" or query_params.get("status") == "approved"
+            
+            st.markdown("<hr style='border-color: #1E1E26; margin-top: 30px; margin-bottom: 30px;'>", unsafe_allow_html=True)
+            st.markdown("<h3 style='font-weight: 800; font-size: 18px; color: #22C55E;'>Já realizou o pagamento?</h3>", unsafe_allow_html=True)
+            st.markdown("<p style='color: #94A3B8; font-size: 13px;'>Após a conclusão no Mercado Pago, insira o seu <b>Código de Liberação</b> abaixo:</p>", unsafe_allow_html=True)
+            
+            # CAMPO LIMPO SEM NENHUMA DICA NO PLACEHOLDER
+            codigo_digitado = st.text_input("Código de Liberação", type="password", placeholder="Digite o código enviado no seu comprovante...")
+            
+            # LIBERAÇÃO POR URL AUTOMÁTICA, POR SENHA OU MODO ADMIN OCULTO
+            if pagamento_aprovado_url or codigo_digitado == "NOVUS97" or nome_lead.strip() == "AdminNovus":
+                st.success("✅ Pagamento Aprovado / Acesso Liberado!")
+                st.markdown("<div class='btn-secundario'>", unsafe_allow_html=True)
+                st.download_button(label="Baixar Relatório Oficial (PDF)", data=st.session_state.pdf_gerado_bytes, file_name="NOVUS_AI_Oficial.pdf", mime="application/pdf", use_container_width=True)
+                st.markdown("</div>", unsafe_allow_html=True)
+                
+                if pref_entrega != "Baixar direto na plataforma agora":
+                    st.info(f"Conforme sua escolha, uma cópia extra também será enviada para o seu **{pref_entrega.split()[-1]}**.")
+            elif codigo_digitado:
+                st.error("❌ Código inválido ou pagamento pendente. Verifique seu comprovante.")
 
 # ==========================================
 # 7. RODAPÉ INTERATIVO
