@@ -9,6 +9,11 @@ import pandas as pd
 import streamlit as st
 import matplotlib.pyplot as plt
 import numpy as np
+import litellm
+
+# CORREÇÃO DE COMUNICAÇÃO COM A GROQ
+# Força o sistema a ignorar parâmetros de cache não suportados pela API
+litellm.drop_params = True
 
 # ==========================================
 # 1. CONFIGURAÇÃO DA MARCA E PÁGINA
