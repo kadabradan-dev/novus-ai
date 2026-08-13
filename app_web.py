@@ -559,7 +559,7 @@ with aba_auditoria:
             # CAMPO LIMPO SEM NENHUMA DICA NO PLACEHOLDER
             codigo_digitado = st.text_input("Código de Liberação", type="password", placeholder="Digite o código enviado no seu comprovante...")
             
-            # LIBERAÇÃO POR URL AUTOMÁTICA, POR SENHA OU MODO ADMIN OCULTO
+            # LIBERAÇÃO POR URL AUTOMÁTICA, POR SENHA OU MODO ADMIN OCULTO COM MENSAGEM DE MANUTENÇÃO PARA ENVIO
             if pagamento_aprovado_url or codigo_digitado == "NOVUS97" or nome_lead.strip() == "AdminNovus@93":
                 st.success("✅ Pagamento Aprovado / Acesso Liberado!")
                 st.markdown("<div class='btn-secundario'>", unsafe_allow_html=True)
@@ -567,7 +567,8 @@ with aba_auditoria:
                 st.markdown("</div>", unsafe_allow_html=True)
                 
                 if pref_entrega != "Baixar direto na plataforma agora":
-                    st.info(f"Conforme sua escolha, uma cópia extra também será enviada para o seu **{pref_entrega.split()[-1]}**.")
+                    st.info("🚧 **Aviso:** O recurso de envio automático para o seu " + pref_entrega.split()[-1] + " está passando por atualizações em nossos servidores neste momento. Por favor, utilize o botão acima para garantir o download do seu documento imediatamente.")
+            
             elif codigo_digitado:
                 st.error("❌ Código inválido ou pagamento pendente. Verifique seu comprovante.")
 
