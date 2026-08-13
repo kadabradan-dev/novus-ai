@@ -1,0 +1,6 @@
+crewai
+streamlit
+pandas
+fpdf
+matplotlib
+numpy
