@@ -560,7 +560,7 @@ with aba_auditoria:
             codigo_digitado = st.text_input("Código de Liberação", type="password", placeholder="Digite o código enviado no seu comprovante...")
             
             # LIBERAÇÃO POR URL AUTOMÁTICA, POR SENHA OU MODO ADMIN OCULTO
-            if pagamento_aprovado_url or codigo_digitado == "NOVUS97" or nome_lead.strip() == "AdminNovus":
+            if pagamento_aprovado_url or codigo_digitado == "NOVUS97" or nome_lead.strip() == "AdminNovus@93":
                 st.success("✅ Pagamento Aprovado / Acesso Liberado!")
                 st.markdown("<div class='btn-secundario'>", unsafe_allow_html=True)
                 st.download_button(label="Baixar Relatório Oficial (PDF)", data=st.session_state.pdf_gerado_bytes, file_name="NOVUS_AI_Oficial.pdf", mime="application/pdf", use_container_width=True)
