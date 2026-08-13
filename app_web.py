@@ -3,7 +3,7 @@ import csv
 from datetime import datetime
 import os
 import time
-from crewai import Agent, Crew, LLM, Process, Task
+from crewai import Agent, Crew, Process, Task
 from fpdf import FPDF
 import pandas as pd
 import streamlit as st
@@ -363,14 +363,14 @@ with aba_auditoria:
 
                 with st.status("**Inicializando Rede Neural Executiva...**", expanded=True) as status:
                     
-                    # Correção da indentação e inicialização segura da LLM da Groq
+                    # CORREÇÃO DEFINITIVA DE COMPATIBILIDADE NA NUVEM
                     if os.environ.get("GROQ_API_KEY"):
                         st.write("Conectando à API da Groq (Nuvem)...")
-                        chave_groq = os.environ.get("GROQ_API_KEY")
-                        modelo_local = LLM(model="groq/llama-3.1-70b-versatile", api_key=chave_groq)
+                        os.environ["GROQ_API_KEY"] = os.environ.get("GROQ_API_KEY")
+                        modelo_local = "groq/llama-3.1-70b-versatile"
                     else:
                         st.write("Conectando ao LLM local (Ollama / Llama 3)...")
-                        modelo_local = LLM(model="ollama/llama3", base_url="http://localhost:11434")
+                        modelo_local = "ollama/llama3"
 
                     st.write("Acordando Agente Analista Financeiro...")
                     instrucao_mestre = (
