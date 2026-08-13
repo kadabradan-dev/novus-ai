@@ -1,6 +1,8 @@
-crewai
 streamlit
 pandas
 fpdf
 matplotlib
 numpy
+crewai==0.28.8
+pydantic==2.6.4
+chromadb==0.4.22
