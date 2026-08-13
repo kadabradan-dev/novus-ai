@@ -9,11 +9,13 @@ import pandas as pd
 import streamlit as st
 import matplotlib.pyplot as plt
 import numpy as np
-import litellm
 
-# CORREÇÃO DE COMUNICAÇÃO COM A GROQ
-# Força o sistema a ignorar parâmetros de cache não suportados pela API
-litellm.drop_params = True
+# ==========================================
+# CORREÇÃO DE BUG DO CREWAI + GROQ
+# Bloqueia a injeção do cache_breakpoint dentro das mensagens
+# ==========================================
+import crewai.llms.cache as _crewai_cache
+_crewai_cache.mark_cache_breakpoint = lambda msg: msg
 
 # ==========================================
 # 1. CONFIGURAÇÃO DA MARCA E PÁGINA
@@ -371,7 +373,6 @@ with aba_auditoria:
                     if os.environ.get("GROQ_API_KEY"):
                         st.write("Conectando à API da Groq (Nuvem)...")
                         chave_groq = os.environ.get("GROQ_API_KEY")
-                        # MODELO ATUALIZADO AQUI
                         modelo_local = LLM(model="groq/llama-3.1-8b-instant", api_key=chave_groq)
                     else:
                         st.write("Conectando ao LLM local (Ollama / Llama 3)...")
