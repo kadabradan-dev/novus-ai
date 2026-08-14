@@ -42,6 +42,12 @@ VALOR_AUDITORIA = 97.00
 URL_MERCADO_PAGO_API = "https://api.mercadopago.com"
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
+# Limites operacionais para impedir espera indefinida no Streamlit Cloud.
+LLM_TIMEOUT_SEGUNDOS = 90
+LLM_MAX_TOKENS = 1400
+LLM_MAX_ITERACOES = 3
+LLM_MAX_TENTATIVAS = 1
+
 
 def obter_configuracao(nome, padrao=None):
     """Lê uma configuração do ambiente, do Streamlit ou do secrets.toml local."""
@@ -817,10 +823,17 @@ with aba_auditoria:
                         chave_groq = obter_configuracao("GROQ_API_KEY")
                         if chave_groq:
                             st.write("Conectando à API da Groq (nuvem)...")
-                            modelo_local = LLM(model="groq/llama-3.1-8b-instant", api_key=chave_groq)
+                            modelo_local = LLM(
+                                model="groq/llama-3.1-8b-instant",
+                                api_key=chave_groq,
+                                timeout=LLM_TIMEOUT_SEGUNDOS,
+                                max_tokens=LLM_MAX_TOKENS,
+                            )
                         else:
-                            st.write("Conectando ao LLM local (Ollama / Llama 3)...")
-                            modelo_local = LLM(model="ollama/llama3", base_url="http://localhost:11434")
+                            raise RuntimeError(
+                                "GROQ_API_KEY não está configurada nos Secrets do Streamlit Cloud. "
+                                "O processamento foi interrompido para não tentar conectar ao Ollama local."
+                            )
 
                         st.write("Acordando o agente analista financeiro...")
                         instrucao_mestre = (
@@ -833,12 +846,18 @@ with aba_auditoria:
                             goal="Extrair KPIs e classificar a rentabilidade com base exclusivamente nos dados fornecidos.",
                             backstory=instrucao_mestre,
                             llm=modelo_local,
+                            max_iter=LLM_MAX_ITERACOES,
+                            max_retry_limit=LLM_MAX_TENTATIVAS,
+                            max_execution_time=LLM_TIMEOUT_SEGUNDOS,
                         )
                         consultor = Agent(
                             role="Estrategista C-Level",
                             goal="Gerar um plano de ação executivo fundamentado no diagnóstico financeiro.",
                             backstory=instrucao_mestre,
                             llm=modelo_local,
+                            max_iter=LLM_MAX_ITERACOES,
+                            max_retry_limit=LLM_MAX_TENTATIVAS,
+                            max_execution_time=LLM_TIMEOUT_SEGUNDOS,
                         )
 
                         st.write("Processando o cruzamento avançado de margens...")
@@ -904,7 +923,7 @@ Com base exclusivamente no diagnóstico do Analista, redija um resumo executivo 
                     st.session_state.relatorio_pronto = False
                     st.session_state.pdf_gerado_bytes = None
                     print(f"NOVUS_AI audit error: {erro!r}", flush=True)
-                    st.error("Não foi possível concluir a auditoria. Tente novamente ou revise a configuração do LLM.")
+                    st.error(f"Não foi possível concluir a auditoria: {erro}")
                 finally:
                     remover_arquivo(grafico_temp)
 
