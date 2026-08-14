@@ -102,8 +102,8 @@ def obter_ou_criar_pedido():
     return st.session_state.pedido_id
 
 
-def criar_preferencia_mercado_pago(pedido_id):
-    """Cria uma preferência única e associa o pagamento ao pedido da sessão."""
+def criar_preferencia_mercado_pago(pedido_id, email_payer=None):
+    """Cria uma preferência única, associa o comprador e preserva o Pix no checkout."""
     token = obter_token_mercado_pago()
     if not token:
         return None, "MERCADOPAGO_ACCESS_TOKEN não configurado."
@@ -116,7 +116,15 @@ def criar_preferencia_mercado_pago(pedido_id):
             "unit_price": VALOR_AUDITORIA,
         }],
         "external_reference": pedido_id,
+        # Não excluir nenhum meio: o Checkout Pro deve oferecer Pix quando
+        # a conta vendedora estiver habilitada e possuir uma Chave Pix ativa.
+        "payment_methods": {
+            "excluded_payment_methods": [],
+            "excluded_payment_types": [],
+        },
     }
+    if email_payer and "@" in str(email_payer):
+        payload["payer"] = {"email": str(email_payer).strip()}
 
     # O Mercado Pago exige URLs HTTPS válidas para back_urls.
     # Em localhost, o checkout é criado sem auto_return; o usuário pode voltar manualmente.
@@ -929,7 +937,7 @@ Apresente, de forma concisa, os KPIs, os maiores lucros e prejuízos, uma Matriz
             
             pedido_id = obter_ou_criar_pedido()
             if not st.session_state.get("checkout_url") and not st.session_state.get("checkout_attempted"):
-                checkout_url, erro_checkout = criar_preferencia_mercado_pago(pedido_id)
+                checkout_url, erro_checkout = criar_preferencia_mercado_pago(pedido_id, email_payer=email_lead)
                 st.session_state.checkout_attempted = True
                 if checkout_url:
                     st.session_state.checkout_url = checkout_url
