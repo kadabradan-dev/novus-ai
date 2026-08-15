@@ -1,5 +1,8 @@
 import base64
+import base64
 import csv
+import io
+import textwrap
 from contextlib import contextmanager
 from datetime import datetime
 
@@ -21,11 +24,17 @@ import tomllib
 import uuid
 from urllib.parse import urlparse
 import matplotlib.pyplot as plt
+from matplotlib.offsetbox import AnnotationBbox, OffsetImage
+from matplotlib.ticker import FuncFormatter
+from PIL import Image
 import numpy as np
+
 import pandas as pd
 import requests
 import streamlit as st
+import streamlit.components.v1 as components
 from crewai import Agent, Crew, Process, Task, LLM
+
 from fpdf import FPDF
 
 # ==========================================
@@ -48,6 +57,7 @@ LLM_MAX_TOKENS = 900
 LLM_MAX_ITERACOES = 2
 LLM_AMOSTRA_LINHAS = 12
 LLM_MAX_TENTATIVAS = 1
+CSV_MAX_LINHAS = 20000
 
 
 def obter_configuracao(nome, padrao=None):
@@ -102,8 +112,8 @@ def obter_ou_criar_pedido():
     return st.session_state.pedido_id
 
 
-def criar_preferencia_mercado_pago(pedido_id, email_payer=None):
-    """Cria uma preferência única, associa o comprador e preserva o Pix no checkout."""
+def criar_preferencia_mercado_pago(pedido_id):
+    """Cria uma preferência única e associa o pagamento ao pedido da sessão."""
     token = obter_token_mercado_pago()
     if not token:
         return None, "MERCADOPAGO_ACCESS_TOKEN não configurado."
@@ -116,15 +126,7 @@ def criar_preferencia_mercado_pago(pedido_id, email_payer=None):
             "unit_price": VALOR_AUDITORIA,
         }],
         "external_reference": pedido_id,
-        # Não excluir nenhum meio: o Checkout Pro deve oferecer Pix quando
-        # a conta vendedora estiver habilitada e possuir uma Chave Pix ativa.
-        "payment_methods": {
-            "excluded_payment_methods": [],
-            "excluded_payment_types": [],
-        },
     }
-    if email_payer and "@" in str(email_payer):
-        payload["payer"] = {"email": str(email_payer).strip()}
 
     # O Mercado Pago exige URLs HTTPS válidas para back_urls.
     # Em localhost, o checkout é criado sem auto_return; o usuário pode voltar manualmente.
@@ -167,7 +169,11 @@ def criar_preferencia_mercado_pago(pedido_id, email_payer=None):
             except (ValueError, TypeError):
                 pass
         codigo_http = f" HTTP {status}" if status else ""
-        return None, f"Não foi possível criar o checkout.{codigo_http}{detalhe}"
+        print(
+            f"NOVUS_AI checkout error{codigo_http}: {type(erro).__name__}",
+            flush=True,
+        )
+        return None, "Não foi possível criar o checkout agora. Tente novamente em instantes."
 
 
 def validar_pagamento_mercado_pago(pedido_id):
@@ -203,11 +209,23 @@ def validar_pagamento_mercado_pago(pedido_id):
             return True, None
         return False, "O pagamento retornado não corresponde a este pedido ou ainda não foi aprovado."
     except (requests.RequestException, ValueError, TypeError) as erro:
-        return False, f"Não foi possível confirmar o pagamento: {erro}"
+        identificador_execucao = uuid.uuid4().hex[:10].upper()
+        print(
+            f"NOVUS_AI payment verification error [{identificador_execucao}]: {type(erro).__name__}",
+            flush=True,
+        )
+        return False, f"Não foi possível confirmar o pagamento agora. Informe o código {identificador_execucao} se o problema continuar."
+
+
+def manual_liberacao_habilitada():
+    valor = obter_configuracao("NOVUS_MANUAL_CODE_ENABLED", "false")
+    return str(valor).strip().lower() in {"1", "true", "sim", "yes"}
 
 
 def validar_codigo_manual(codigo):
-    """Permite um código operacional apenas quando definido em secrets, nunca hardcoded."""
+    """Permite código operacional somente quando explicitamente habilitado nos Secrets."""
+    if not manual_liberacao_habilitada():
+        return False
     codigo_secreto = obter_configuracao("NOVUS_MANUAL_CODE")
     return bool(codigo_secreto and codigo and hmac.compare_digest(str(codigo), str(codigo_secreto)))
 
@@ -225,6 +243,326 @@ def remover_arquivo(caminho):
             os.remove(caminho)
         except OSError:
             pass
+
+
+GRAFICO_MAX_ITENS = 24
+COR_FUNDO_SITE = "#13131A"
+COR_FUNDO_PDF = "#F8FAFC"
+COR_RECEITA = "#FF8A00"
+COR_CUSTO = "#FF007A"
+COR_MARGEM = "#22C55E"
+
+
+def carregar_logo_para_grafico():
+    """Carrega a mesma logo usada pelo splash, quando o arquivo estiver disponível."""
+    caminho_logo = obter_configuracao("NOVUS_LOGO_PATH", os.path.join(BASE_DIR, "novus.gif"))
+    try:
+        with Image.open(caminho_logo) as imagem_original:
+            try:
+                imagem_original.seek(0)
+            except EOFError:
+                pass
+            logo = imagem_original.convert("RGBA")
+            caixa = logo.getbbox()
+            if not caixa:
+                return None
+            logo = logo.crop(caixa)
+            logo.thumbnail((310, 86), Image.Resampling.LANCZOS)
+            return np.asarray(logo).copy()
+    except (FileNotFoundError, PermissionError, OSError, ValueError):
+        return None
+
+
+def formatar_reais_curto(valor):
+    """Formata valores para rótulos compactos sem perder a leitura financeira."""
+    try:
+        valor = float(valor)
+    except (TypeError, ValueError):
+        return "R$ 0"
+    sinal = "-" if valor < 0 else ""
+    absoluto = abs(valor)
+    if absoluto >= 1_000_000:
+        return f"{sinal}R$ {absoluto / 1_000_000:.1f} mi".replace(".", ",")
+    if absoluto >= 1_000:
+        return f"{sinal}R$ {absoluto / 1_000:.0f}k".replace(".", ",")
+    return f"{sinal}R$ {absoluto:,.0f}".replace(",", "X").replace(".", ",").replace("X", ".")
+
+
+def formatar_eixo_reais(valor, _posicao):
+    return formatar_reais_curto(valor)
+
+
+def rotulo_produto(produto, limite=18):
+    texto = str(produto).strip()
+    if len(texto) <= limite:
+        return texto
+    encurtado = textwrap.shorten(texto, width=limite, placeholder="…")
+    if len(encurtado) <= limite:
+        return encurtado
+    return texto[: max(limite - 1, 1)].rstrip() + "…"
+
+
+def obter_dados_grafico(tabela):
+    dados = tabela.head(GRAFICO_MAX_ITENS).copy()
+    dados["Receita Total"] = pd.to_numeric(dados["Receita Total"], errors="coerce").fillna(0)
+    dados["Custo Total"] = pd.to_numeric(dados["Custo Total"], errors="coerce").fillna(0)
+    dados["Margem (%)"] = pd.to_numeric(dados["Margem (%)"], errors="coerce").fillna(0)
+    dados["Produto Gráfico"] = dados["Produto"].map(rotulo_produto)
+    return dados
+
+
+def criar_figura_financeira(tabela, modo="site", nome_empresa=None):
+    """Cria a figura visual da tela ou a versão clara e pronta para PDF."""
+    dados = obter_dados_grafico(tabela)
+    se_pdf = modo == "pdf"
+    fundo = COR_FUNDO_PDF if se_pdf else COR_FUNDO_SITE
+    cor_texto = "#0F172A" if se_pdf else "#E2E8F0"
+    cor_secundaria = "#475569" if se_pdf else "#94A3B8"
+    grade = "#CBD5E1" if se_pdf else "#334155"
+    largura = 13.4 if se_pdf else (18 if st.session_state.get("grafico_pre_ampliado", False) else 13)
+    altura = 7.6 if se_pdf else (8.2 if st.session_state.get("grafico_pre_ampliado", False) else 5.8)
+
+    fig, eixo = plt.subplots(figsize=(largura, altura), facecolor=fundo)
+    eixo.set_facecolor(fundo)
+    posicoes = np.arange(len(dados))
+    receita = dados["Receita Total"].to_numpy(dtype=float)
+    custo = dados["Custo Total"].to_numpy(dtype=float)
+    margem = dados["Margem (%)"].to_numpy(dtype=float)
+    largura_barra = 0.36
+
+    if se_pdf:
+        barra_receita = eixo.bar(
+            posicoes - largura_barra / 2,
+            receita,
+            largura_barra,
+            label="Receita Bruta",
+            color=COR_RECEITA,
+            edgecolor="#FFFFFF",
+            linewidth=0.8,
+            zorder=3,
+        )
+        barra_custo = eixo.bar(
+            posicoes + largura_barra / 2,
+            custo,
+            largura_barra,
+            label="Custo Total",
+            color=COR_CUSTO,
+            edgecolor="#FFFFFF",
+            linewidth=0.8,
+            zorder=3,
+        )
+    else:
+        barra_custo = eixo.bar(
+            posicoes,
+            custo,
+            largura_barra * 1.55,
+            label="Custo Total",
+            color=COR_CUSTO,
+            edgecolor="#0B0B0F",
+            linewidth=0.8,
+            alpha=0.96,
+            zorder=3,
+        )
+        barra_receita = eixo.bar(
+            posicoes,
+            receita,
+            largura_barra * 1.55,
+            bottom=custo,
+            label="Receita Total",
+            color=COR_RECEITA,
+            edgecolor="#0B0B0F",
+            linewidth=0.8,
+            alpha=0.96,
+            zorder=3,
+        )
+
+    eixo.yaxis.set_major_formatter(FuncFormatter(formatar_eixo_reais))
+    eixo.set_ylabel("Valor financeiro", color=cor_texto, fontweight="bold", labelpad=10)
+    eixo.set_xlabel("Produtos ordenados por lucratividade", color=cor_secundaria, labelpad=10)
+    eixo.tick_params(axis="x", colors=cor_texto, labelsize=8 if not se_pdf else 8)
+    eixo.tick_params(axis="y", colors=cor_secundaria, labelsize=8)
+    eixo.set_xticks(posicoes)
+    eixo.set_xticklabels(dados["Produto Gráfico"], rotation=48 if se_pdf else 55, ha="right", color=cor_texto)
+    eixo.grid(axis="y", linestyle="--", linewidth=0.7, color=grade, alpha=0.38 if se_pdf else 0.52, zorder=0)
+    eixo.set_axisbelow(True)
+    for lado in ["top", "right"]:
+        eixo.spines[lado].set_visible(False)
+    eixo.spines["left"].set_color(grade)
+    eixo.spines["bottom"].set_color(grade)
+
+    eixo_margem = eixo.twinx()
+    eixo_margem.plot(
+        posicoes,
+        margem,
+        color=COR_MARGEM,
+        marker="o",
+        markersize=5.5 if se_pdf else 6,
+        markerfacecolor=COR_MARGEM,
+        markeredgecolor=fundo,
+        markeredgewidth=1.5,
+        linewidth=2.5,
+        label="Margem de lucro (%)",
+        zorder=5,
+    )
+    eixo_margem.set_ylabel("Margem de lucro (%)", color=COR_MARGEM, fontweight="bold", labelpad=10)
+    eixo_margem.tick_params(axis="y", colors=COR_MARGEM, labelsize=8)
+    margem_minima = min(float(np.nanmin(margem)), 0.0)
+    margem_maxima = max(float(np.nanmax(margem)), 0.0)
+    margem_amplitude = max(margem_maxima - margem_minima, 10.0)
+    eixo_margem.set_ylim(margem_minima - margem_amplitude * 0.12, margem_maxima + margem_amplitude * 0.18)
+    eixo_margem.spines["top"].set_visible(False)
+    eixo_margem.spines["right"].set_color(COR_MARGEM)
+    eixo_margem.axhline(0, color=COR_MARGEM, linewidth=0.8, alpha=0.25, linestyle=":", zorder=1)
+
+    titulo = "Auditoria de Rentabilidade"
+    subtitulo = "Receita, custos e margem por produto"
+    if nome_empresa:
+        subtitulo = f"{subtitulo} | Cliente: {rotulo_produto(nome_empresa, 42)}"
+    eixo.set_title(titulo, loc="left", color=cor_texto, fontsize=16 if se_pdf else 15, fontweight="bold", pad=18)
+    eixo.text(0, 1.015, subtitulo, transform=eixo.transAxes, color=cor_secundaria, fontsize=8.8, va="bottom")
+
+    for barras in [barra_receita, barra_custo]:
+        for barra in barras:
+            altura_barra = barra.get_height()
+            if altura_barra <= 0:
+                continue
+            eixo.annotate(
+                formatar_reais_curto(altura_barra),
+                xy=(barra.get_x() + barra.get_width() / 2, barra.get_y() + altura_barra),
+                xytext=(0, 4),
+                textcoords="offset points",
+                ha="center",
+                va="bottom",
+                fontsize=7 if se_pdf else 6.8,
+                color=cor_texto,
+                fontweight="bold",
+                rotation=90 if len(dados) > 16 else 0,
+                clip_on=True,
+            )
+
+    linhas_1, rotulos_1 = eixo.get_legend_handles_labels()
+    linhas_2, rotulos_2 = eixo_margem.get_legend_handles_labels()
+    eixo.legend(
+        linhas_1 + linhas_2,
+        rotulos_1 + rotulos_2,
+        loc="upper center",
+        bbox_to_anchor=(0.5, 1.13),
+        ncol=3,
+        frameon=False,
+        fontsize=8.5,
+        labelcolor=cor_texto,
+    )
+    logo = carregar_logo_para_grafico()
+    if logo is not None:
+        logo = logo.copy()
+        fator_opacidade = 0.72 if se_pdf else 0.58
+        logo[..., 3] = (logo[..., 3].astype(float) * fator_opacidade).clip(0, 255).astype(np.uint8)
+        imagem_logo = OffsetImage(logo, zoom=0.34 if se_pdf else 0.28)
+        fig.add_artist(
+            AnnotationBbox(
+                imagem_logo,
+                (0.985, 0.012),
+                xycoords="figure fraction",
+                box_alignment=(1, 0),
+                frameon=False,
+                pad=0,
+                zorder=20,
+            )
+        )
+    else:
+        fig.text(0.98, 0.02, "NOVUS AI", ha="right", va="bottom", fontsize=18, fontweight="bold", color="#CBD5E1", alpha=0.55)
+    fig.tight_layout(rect=(0, 0.03, 1, 0.94))
+    return fig
+
+
+def figura_para_png(fig, dpi=220):
+    """Converte a figura em PNG para a tela e para o botão de download."""
+    memoria = io.BytesIO()
+    fig.savefig(memoria, format="png", dpi=dpi, bbox_inches="tight", facecolor=fig.get_facecolor())
+    plt.close(fig)
+    return memoria.getvalue()
+
+
+def salvar_grafico_pdf(tabela, caminho, nome_empresa=None):
+    """Gera o gráfico claro e detalhado que será incorporado no relatório PDF."""
+    imagem = figura_para_png(criar_figura_financeira(tabela, modo="pdf", nome_empresa=nome_empresa), dpi=300)
+    with open(caminho, "wb") as arquivo:
+        arquivo.write(imagem)
+    if not os.path.isfile(caminho) or os.path.getsize(caminho) == 0:
+        raise OSError("O arquivo do gráfico foi criado vazio.")
+
+
+def renderizar_imagem_animada(imagem_png, ampliado=False):
+    """Exibe a imagem em um cartão com entrada suave; respeita redução de movimento."""
+    imagem64 = base64.b64encode(imagem_png).decode("ascii")
+    altura = 690 if ampliado else 485
+    html = f"""
+    <style>
+        html, body {{ margin: 0; padding: 0; background: transparent; overflow: hidden; }}
+        .novus-chart-shell {{
+            box-sizing: border-box; width: 100%; padding: 10px; border-radius: 16px;
+            background: linear-gradient(145deg, rgba(30,30,38,.98), rgba(11,11,15,.98));
+            border: 1px solid rgba(255,138,0,.28);
+            box-shadow: 0 18px 55px rgba(0,0,0,.38), 0 0 28px rgba(255,0,122,.08);
+            opacity: 0; transform: translateY(12px) scale(.965);
+            animation: novusChartIn .62s cubic-bezier(.16,1,.3,1) forwards;
+        }}
+        .novus-chart-shell img {{ display: block; width: 100%; height: auto; border-radius: 10px; }}
+        @keyframes novusChartIn {{ to {{ opacity: 1; transform: translateY(0) scale(1); }} }}
+        @media (prefers-reduced-motion: reduce) {{
+            .novus-chart-shell {{ animation: none; opacity: 1; transform: none; }}
+        }}
+    </style>
+    <div class="novus-chart-shell"><img alt="Gráfico financeiro NOVUS AI" src="data:image/png;base64,{imagem64}"></div>
+    """
+    components.html(html, height=altura, scrolling=False)
+
+
+def renderizar_pre_grafico(tabela):
+    """Renderiza o pré-gráfico escuro, detalhado e ampliável sem sair do relatório."""
+    ampliado = bool(st.session_state.get("grafico_pre_ampliado", False))
+    imagem_png = figura_para_png(criar_figura_financeira(tabela, modo="site"), dpi=220)
+
+    if ampliado:
+        st.markdown(
+            "<div style='margin:8px 0 10px; color:#E2E8F0; font-size:15px; font-weight:800;'>"
+            "Visualização ampliada do pré-gráfico</div>"
+            "<div style='margin-bottom:12px; color:#94A3B8; font-size:12px;'>"
+            "Use esta leitura para revisar receita, custos e margem antes de iniciar o processamento.</div>",
+            unsafe_allow_html=True,
+        )
+        renderizar_imagem_animada(imagem_png, ampliado=True)
+        col_voltar, col_baixar = st.columns([1, 1])
+        with col_voltar:
+            if st.button("↩ Voltar ao relatório", key="fechar_pre_grafico", use_container_width=True):
+                st.session_state.grafico_pre_ampliado = False
+                st.rerun()
+        with col_baixar:
+            st.download_button(
+                "Baixar pré-gráfico",
+                data=imagem_png,
+                file_name="NOVUS_AI_Pre_Grafico.png",
+                mime="image/png",
+                key="baixar_pre_grafico_ampliado",
+                use_container_width=True,
+            )
+        return
+
+    renderizar_imagem_animada(imagem_png, ampliado=False)
+    col_ampliar, col_baixar = st.columns([1, 1])
+    with col_ampliar:
+        if st.button("⛶ Ampliar gráfico", key="abrir_pre_grafico", use_container_width=True):
+            st.session_state.grafico_pre_ampliado = True
+            st.rerun()
+    with col_baixar:
+        st.download_button(
+            "Baixar pré-gráfico",
+            data=imagem_png,
+            file_name="NOVUS_AI_Pre_Grafico.png",
+            mime="image/png",
+            key="baixar_pre_grafico",
+            use_container_width=True,
+        )
 
 
 def pdf_para_bytes(documento):
@@ -253,7 +591,11 @@ def ler_e_validar_csv(arquivo):
         arquivo.seek(0)
         tabela = pd.read_csv(arquivo, sep=None, engine="python", encoding="latin-1")
 
+    if len(tabela) > CSV_MAX_LINHAS:
+        raise ValueError(f"A planilha excede o limite de {CSV_MAX_LINHAS:,} linhas.")
+
     tabela.columns = [normalizar_coluna(coluna) for coluna in tabela.columns]
+
     tabela = tabela.rename(columns={
         "Receita Total": "Receita Total",
         "Custo Total": "Custo Total",
@@ -300,6 +642,8 @@ if "relatorio_pronto" not in st.session_state:
     st.session_state.relatorio_pronto = False
 if "pdf_gerado_bytes" not in st.session_state:
     st.session_state.pdf_gerado_bytes = None
+if "grafico_pre_ampliado" not in st.session_state:
+    st.session_state.grafico_pre_ampliado = False
 
 # ==========================================
 # 3. DESIGN SYSTEM: ÍCONES SVG TWO-TONE
@@ -568,40 +912,8 @@ df_exemplo['Margem (%)'] = (df_exemplo['Lucro Líquido'] / df_exemplo['Receita T
 df_exemplo = df_exemplo.sort_values(by='Lucro Líquido', ascending=False).reset_index(drop=True)
 
 # --- GERADOR DO GRÁFICO E PDF DE EXEMPLO ---
-fig_demo, ax1_demo = plt.subplots(figsize=(12, 7))
-ax2_demo = ax1_demo.twinx()
-x_demo = np.arange(len(df_exemplo['Produto']))
-width_demo = 0.35
-
-bar1_demo = ax1_demo.bar(x_demo - width_demo/2, df_exemplo['Receita Total'], width_demo, label='Receita Bruta', color='#FF8A00', edgecolor='white', linewidth=1)
-bar2_demo = ax1_demo.bar(x_demo + width_demo/2, df_exemplo['Custo Total'], width_demo, label='Custo Total', color='#FF007A', edgecolor='white', linewidth=1)
-line1_demo = ax2_demo.plot(x_demo, df_exemplo['Margem (%)'], color='#22C55E', marker='o', linewidth=2.5, markersize=8, label='Margem de Lucro (%)')
-
-ax1_demo.set_ylabel('Valor Financeiro (R$)', fontweight='bold', color='#334155')
-ax2_demo.set_ylabel('Margem de Lucro (%)', fontweight='bold', color='#22C55E')
-ax1_demo.set_title('Auditoria de Rentabilidade: Ordem de Lucratividade (EXEMPLO)', fontsize=16, fontweight='900', color='#0F172A', pad=15)
-ax1_demo.set_xticks(x_demo)
-ax1_demo.set_xticklabels(df_exemplo['Produto'], rotation=45, ha='right', fontsize=9, fontweight='600')
-ax1_demo.grid(axis='y', linestyle='--', alpha=0.3)
-
-def autolabel_demo(rects, ax):
-    for rect in rects:
-        height = rect.get_height()
-        ax.annotate(f'R${height/1000:.0f}k',
-                    xy=(rect.get_x() + rect.get_width() / 2, height),
-                    xytext=(0, 3), textcoords="offset points",
-                    ha='center', va='bottom', fontsize=8, fontweight='bold', color='#334155')
-autolabel_demo(bar1_demo, ax1_demo)
-autolabel_demo(bar2_demo, ax1_demo)
-
-lines_1_demo, labels_1_demo = ax1_demo.get_legend_handles_labels()
-lines_2_demo, labels_2_demo = ax2_demo.get_legend_handles_labels()
-ax1_demo.legend(lines_1_demo + lines_2_demo, labels_1_demo + labels_2_demo, loc='upper right', frameon=True, shadow=True)
-
-plt.tight_layout()
 grafico_demo_temp = caminho_temporario(".png")
-fig_demo.savefig(grafico_demo_temp, dpi=300, bbox_inches='tight', facecolor='#F8FAFC')
-plt.close(fig_demo)
+salvar_grafico_pdf(df_exemplo, grafico_demo_temp, nome_empresa="Exemplo NOVUS AI")
 
 pdf_demo = PDF()
 pdf_demo.add_page()
@@ -709,7 +1021,9 @@ with aba_sobre:
         st.markdown(f'<div class="feature-card"><div class="feature-content"><div class="feature-title">{ICO_LOCK} Segurança Local</div><div class="feature-desc">Processamento realizado conforme a configuração do ambiente. Consulte a política de dados antes de enviar informações sensíveis.</div></div><div class="feature-stat">{ICO_LOCK_SM} Dados sob política de acesso</div></div>', unsafe_allow_html=True)
 
 with aba_auditoria:
+    st.markdown('<div id="novus-auditoria-topo"></div>', unsafe_allow_html=True)
     st.markdown('<h1 class="gradient-text" style="font-weight: 900; font-size: 38px;">Descubra o seu Lucro Oculto</h1>', unsafe_allow_html=True)
+
     st.markdown("<p style='color: #94A3B8; font-size: 15px; margin-bottom: 30px;'>Tenha o relatório completo que sua empresa precisa em apenas 1 clique através de inteligência artificial.</p>", unsafe_allow_html=True)
 
     html_infografico = (
@@ -744,22 +1058,33 @@ with aba_auditoria:
             st.session_state.checkout_url = None
             st.session_state.checkout_error = None
             st.session_state.checkout_attempted = False
+            st.session_state.grafico_pre_ampliado = False
             st.session_state.pedido_id = uuid.uuid4().hex
+
         if getattr(arquivo_cliente, "size", 0) > 5 * 1024 * 1024:
             st.error("O arquivo excede o limite de 5 MB.")
             st.stop()
         try:
             tabela = ler_e_validar_csv(arquivo_cliente)
         except (ValueError, UnicodeDecodeError, pd.errors.ParserError) as erro:
-            st.error(f"Não foi possível validar a planilha: {erro}")
+            identificador_execucao = uuid.uuid4().hex[:10].upper()
+            print(
+                f"NOVUS_AI CSV validation error [{identificador_execucao}]: {type(erro).__name__}",
+                flush=True,
+            )
+            st.error(
+                "Não foi possível validar a planilha. "
+                f"Verifique o formato do arquivo ou informe o código {identificador_execucao}."
+            )
             st.stop()
 
         st.markdown("<br><h3 style='font-weight: 800;'>Visão Geral Financeira (Receita vs. Custos)</h3>", unsafe_allow_html=True)
         
-        colunas_grafico = tabela.head(100)
-        st.bar_chart(data=colunas_grafico, x="Produto", y=["Receita Total", "Custo Total"], color=["#FF8A00", "#FF007A"])
-        if len(tabela) > 100:
-            st.caption("A visualização mostra os 100 produtos mais rentáveis; os cálculos consideram toda a base.")
+        renderizar_pre_grafico(tabela)
+
+        if len(tabela) > GRAFICO_MAX_ITENS:
+
+            st.caption(f"A visualização mostra os {GRAFICO_MAX_ITENS} produtos mais rentáveis; os cálculos consideram toda a base.")
 
         st.markdown("<br>", unsafe_allow_html=True)
         
@@ -792,39 +1117,18 @@ with aba_auditoria:
 
                 grafico_temp = caminho_temporario(".png")
                 try:
-                    fig, ax1 = plt.subplots(figsize=(12, 7))
-                    ax2 = ax1.twinx()
-                    visualizacao = tabela.head(100)
-                    x = np.arange(len(visualizacao))
-                    width = 0.35
-                    bar1 = ax1.bar(x - width / 2, visualizacao["Receita Total"], width, label="Receita Bruta", color="#FF8A00", edgecolor="white", linewidth=1)
-                    bar2 = ax1.bar(x + width / 2, visualizacao["Custo Total"], width, label="Custo Total", color="#FF007A", edgecolor="white", linewidth=1)
-                    ax2.plot(x, visualizacao["Margem (%)"], color="#22C55E", marker="o", linewidth=2.5, markersize=8, label="Margem de Lucro (%)")
-                    ax1.set_ylabel("Valor Financeiro (R$)", fontweight="bold", color="#334155")
-                    ax2.set_ylabel("Margem de Lucro (%)", fontweight="bold", color="#22C55E")
-                    ax1.set_title("Auditoria de Rentabilidade: Ordem de Lucratividade", fontsize=16, fontweight="900", color="#0F172A", pad=15)
-                    ax1.set_xticks(x)
-                    ax1.set_xticklabels(visualizacao["Produto"], rotation=45, ha="right", fontsize=9, fontweight="600")
-                    ax1.grid(axis="y", linestyle="--", alpha=0.3)
-                    for barras in [bar1, bar2]:
-                        for barra in barras:
-                            altura = barra.get_height()
-                            ax1.annotate(
-                                f"R$ {altura / 1000:.0f}k",
-                                xy=(barra.get_x() + barra.get_width() / 2, altura),
-                                xytext=(0, 3), textcoords="offset points",
-                                ha="center", va="bottom", fontsize=8, fontweight="bold", color="#334155",
-                            )
-                    linhas_1, rotulos_1 = ax1.get_legend_handles_labels()
-                    linhas_2, rotulos_2 = ax2.get_legend_handles_labels()
-                    ax1.legend(linhas_1 + linhas_2, rotulos_1 + rotulos_2, loc="upper right", frameon=True, shadow=True)
-                    plt.tight_layout()
-                    fig.savefig(grafico_temp, dpi=300, bbox_inches="tight", facecolor="#F8FAFC")
-                    plt.close(fig)
+                    salvar_grafico_pdf(tabela, grafico_temp, nome_empresa=nome_lead)
                 except Exception as erro:
                     remover_arquivo(grafico_temp)
-                    print(f"NOVUS_AI chart error: {erro!r}", flush=True)
-                    st.error("Não foi possível gerar o gráfico da auditoria.")
+                    identificador_grafico = uuid.uuid4().hex[:10].upper()
+                    print(
+                        f"NOVUS_AI chart error [{identificador_grafico}]: {type(erro).__name__}",
+                        flush=True,
+                    )
+                    st.error(
+                        "Não foi possível gerar o gráfico financeiro obrigatório. "
+                        f"Tente novamente. Se o problema continuar, informe o código {identificador_grafico}."
+                    )
                     st.stop()
 
                 try:
@@ -896,25 +1200,40 @@ Apresente, de forma concisa, os KPIs, os maiores lucros e prejuízos, uma Matriz
                         st.write("Redigindo o relatório executivo final...")
                         resultado = equipe.kickoff()
 
+                        if not os.path.isfile(grafico_temp) or os.path.getsize(grafico_temp) == 0:
+                            raise OSError("O gráfico financeiro obrigatório não está disponível para o PDF.")
+
                         pdf = PDF()
                         pdf.add_page()
                         pdf.chapter_title("1. SUMÁRIO EXECUTIVO E ESTRATÉGIA C-LEVEL")
                         pdf.chapter_body(str(resultado))
-                        if os.path.exists(grafico_temp):
-                            pdf.add_page()
-                            pdf.chapter_title("2. MATRIZ FINANCEIRA E MAPEAMENTO DE GARGALOS")
-                            pdf.chapter_body("O painel analítico cruza a receita bruta, o custo total e a margem de lucro. Os cálculos consideram toda a base enviada.")
-                            pdf.ln(5)
-                            pdf.image(grafico_temp, x=10, w=190)
+                        pdf.add_page()
+                        pdf.chapter_title("2. MATRIZ FINANCEIRA E MAPEAMENTO DE GARGALOS")
+                        pdf.chapter_body(
+                            "O painel analítico cruza a receita bruta, o custo total e a margem de lucro. "
+                            "Os cálculos consideram toda a base enviada; a visualização apresenta os produtos "
+                            f"mais rentáveis, limitados aos {GRAFICO_MAX_ITENS} primeiros para preservar a leitura."
+                        )
+                        pdf.ln(5)
+                        pdf.image(grafico_temp, x=10, w=190)
 
                         st.session_state.pdf_gerado_bytes = pdf_para_bytes(pdf)
+
                         st.session_state.relatorio_pronto = True
                         status.update(label="**Auditoria concluída com sucesso!**", state="complete", expanded=False)
                 except Exception as erro:
                     st.session_state.relatorio_pronto = False
                     st.session_state.pdf_gerado_bytes = None
-                    print(f"NOVUS_AI audit error: {erro!r}", flush=True)
-                    st.error(f"Não foi possível concluir a auditoria: {erro}")
+                    identificador_execucao = uuid.uuid4().hex[:10].upper()
+                    print(
+                        f"NOVUS_AI audit error [{identificador_execucao}]: {type(erro).__name__}",
+                        flush=True,
+                    )
+                    st.error(
+                        "Não foi possível concluir a auditoria agora. "
+                        f"Tente novamente. Se o problema continuar, informe o código {identificador_execucao}."
+                    )
+
                 finally:
                     remover_arquivo(grafico_temp)
 
@@ -937,7 +1256,7 @@ Apresente, de forma concisa, os KPIs, os maiores lucros e prejuízos, uma Matriz
             
             pedido_id = obter_ou_criar_pedido()
             if not st.session_state.get("checkout_url") and not st.session_state.get("checkout_attempted"):
-                checkout_url, erro_checkout = criar_preferencia_mercado_pago(pedido_id, email_payer=email_lead)
+                checkout_url, erro_checkout = criar_preferencia_mercado_pago(pedido_id)
                 st.session_state.checkout_attempted = True
                 if checkout_url:
                     st.session_state.checkout_url = checkout_url
@@ -966,12 +1285,15 @@ Apresente, de forma concisa, os KPIs, os maiores lucros e prejuízos, uma Matriz
             st.markdown("<p style='color: #94A3B8; font-size: 13px;'>Após a conclusão no Mercado Pago, retorne a esta página. A confirmação será feita diretamente pela API.</p>", unsafe_allow_html=True)
 
             pagamento_confirmado, erro_pagamento = validar_pagamento_mercado_pago(pedido_id)
-            codigo_digitado = st.text_input(
-                "Código operacional (opcional)",
-                type="password",
-                placeholder="Use somente se o suporte fornecer um código temporário...",
-            )
+            codigo_digitado = ""
+            if manual_liberacao_habilitada():
+                codigo_digitado = st.text_input(
+                    "Código operacional (opcional)",
+                    type="password",
+                    placeholder="Use somente se o suporte fornecer um código temporário...",
+                )
             codigo_valido = validar_codigo_manual(codigo_digitado)
+
             acesso_liberado = pagamento_confirmado or codigo_valido
 
             if acesso_liberado:
