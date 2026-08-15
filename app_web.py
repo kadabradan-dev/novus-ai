@@ -803,9 +803,9 @@ st.markdown(
     [data-testid="stFileUploaderDropzoneInstructions"] { display: none !important; }
     [data-testid="stFileUploader"] section small { color: #64748B !important; }
     
-    [data-testid="stFileUploader"] button { background: #1A1A24 !important; color: transparent !important; border: 1px solid #2E2E38 !important; border-radius: 6px !important; transition: all 0.3s ease; position: relative; }
-    [data-testid="stFileUploader"] button::after { content: "Procurar Arquivo"; position: absolute; left: 0; right: 0; top: 0; bottom: 0; display: flex; align-items: center; justify-content: center; margin-left: 20px; color: #FFFFFF !important; font-weight: 600 !important; font-size: 14px; transition: all 0.3s ease; }
-    [data-testid="stFileUploader"] button::before { content: ""; position: absolute; left: 50%; top: 50%; transform: translate(-75px, -50%); width: 16px; height: 16px; z-index: 1; transition: all 0.3s ease; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23FFFFFF' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4'/%3E%3Cpolyline points='17 8 12 3 7 8'/%3E%3Cline x1='12' y1='3' x2='12' y2='15'/%3E%3C/svg%3E"); background-size: contain; background-repeat: no-repeat; }
+    [data-testid="stFileUploader"] button { background: #1A1A24 !important; color: transparent !important; border: 1px solid #2E2E38 !important; border-radius: 8px !important; transition: all 0.3s ease; position: relative; width: 140px !important; max-width: 140px !important; min-height: 46px !important; height: 46px !important; margin: 0 auto !important; padding: 0 !important; display: flex !important; align-items: center !important; justify-content: center !important; overflow: hidden !important; }
+    [data-testid="stFileUploader"] button::after { content: "Enviar"; position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; padding: 0 10px 0 22px; color: #FFFFFF !important; font-weight: 700 !important; font-size: 13px; line-height: 1 !important; letter-spacing: .1px; transition: all 0.3s ease; }
+    [data-testid="stFileUploader"] button::before { content: ""; position: absolute; left: 22px; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; z-index: 1; transition: all 0.3s ease; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23FFFFFF' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4'/%3E%3Cpolyline points='17 8 12 3 7 8'/%3E%3Cline x1='12' y1='3' x2='12' y2='15'/%3E%3C/svg%3E"); background-size: contain; background-repeat: no-repeat; }
     [data-testid="stFileUploader"] button:hover { border-color: #FF8A00 !important; box-shadow: 0 4px 12px rgba(255, 138, 0, 0.1) !important; }
     [data-testid="stFileUploader"] button:hover::after { color: #FF8A00 !important; }
     [data-testid="stFileUploader"] button:hover::before { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23FF8A00' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4'/%3E%3Cpolyline points='17 8 12 3 7 8'/%3E%3Cline x1='12' y1='3' x2='12' y2='15'/%3E%3C/svg%3E"); }
@@ -818,12 +818,24 @@ st.markdown(
     .stTabs [data-baseweb="tab"] { color: #64748B; font-weight: 600; padding: 16px 0; }
     .stTabs [aria-selected="true"] { color: #FF8A00 !important; border-bottom-color: #FF8A00 !important; }
 
-    .stButton > button, .stLinkButton > a { background: linear-gradient(90deg, #FF007A 0%, #FF8A00 100%) !important; color: #FFFFFF !important; border-radius: 8px !important; border: none !important; padding: 12px 24px !important; font-weight: 800 !important; width: 100% !important; box-shadow: 0px 4px 15px rgba(255, 138, 0, 0.25) !important; }
+    .stButton > button, .stLinkButton > a { background: linear-gradient(90deg, #FF007A 0%, #FF8A00 100%) !important; color: #FFFFFF !important; border-radius: 8px !important; border: none !important; padding: 0 24px !important; min-height: 48px !important; height: 48px !important; display: flex !important; align-items: center !important; justify-content: center !important; font-weight: 800 !important; letter-spacing: .1px; width: 100% !important; box-shadow: 0px 4px 15px rgba(255, 138, 0, 0.25) !important; transition: transform .25s ease, box-shadow .25s ease, filter .25s ease !important; }
+    .stButton > button:hover, .stLinkButton > a:hover { transform: translateY(-1px); filter: brightness(1.05); box-shadow: 0px 7px 20px rgba(255, 138, 0, 0.32) !important; }
     .btn-secundario > button { background: #1A1A24 !important; border: 1px solid #2E2E38 !important; box-shadow: none !important; }
     .btn-secundario > button:hover { border-color: #FF8A00 !important; color: #FF8A00 !important; }
 
     .badge { background: #13131A; border: 1px solid #1E1E26; padding: 10px 12px; border-radius: 8px; font-size: 11px; color: #94A3B8; display: flex; align-items: center; transition: all 0.3s ease; cursor: pointer; }
-    .badge:hover { border-color: #FF8A00; color: #FFFFFF; background: #1A1A24; transform: translateY(-4px); box-shadow: 0 4px 12px rgba(255, 138, 0, 0.1); }
+    .badge:hover { border-color: #FF8A00; color: #FFFFFF; background: #1A1A24; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(255, 138, 0, 0.1); }
+    .footer-badges { display: flex; justify-content: center; align-items: stretch; gap: 14px; flex-wrap: wrap; margin: 0 auto 28px; max-width: 1120px; }
+    .footer-badge { box-sizing: border-box; flex: 0 1 238px; width: 238px; min-width: 0 !important; min-height: 76px; height: 76px; padding: 12px 14px !important; gap: 10px; align-items: center; overflow: hidden; }
+    .footer-badge > svg { flex: 0 0 22px; width: 22px !important; height: 22px !important; margin: 0 2px 0 0 !important; }
+    .footer-badge-copy { min-width: 0; display: flex; flex-direction: column; justify-content: center; line-height: 1.25; }
+    .footer-badge-copy b { display: block; color: #E2E8F0; font-size: 11px; white-space: nowrap; }
+    .footer-badge-copy span { display: block; margin-top: 4px; font-size: 10px; line-height: 1.25; color: #64748B; }
+    .privacy-card { background-color: #13131A; border: 1px solid #1E1E26; border-radius: 10px; padding: 14px 15px 15px; margin: 10px 0 22px; }
+    .privacy-card-title { display: flex; align-items: center; gap: 6px; color: #FF8A00; font-weight: 800; font-size: 13px; line-height: 1.2; }
+    .privacy-card-title svg { flex: 0 0 20px; width: 20px !important; height: 20px !important; margin: 0 !important; }
+    .privacy-card-copy { margin: 7px 0 0 26px; color: #94A3B8; font-size: 12px; line-height: 1.4; }
+    @media (max-width: 768px) { .footer-badge { flex-basis: min(100%, 320px); width: min(100%, 320px); } }
     </style>
     """,
     unsafe_allow_html=True,
@@ -1074,6 +1086,16 @@ if os.path.exists(grafico_demo_temp):
 
 pdf_demo_bytes = pdf_para_bytes(pdf_demo)
 
+# Se o relatório oficial de demonstração estiver junto do aplicativo,
+# ele substitui o exemplo sintético sem alterar o fluxo de auditoria paga.
+arquivo_exemplo_cliente = os.path.join(BASE_DIR, "EXEMPLO_NOVUS_AI.pdf")
+try:
+    if os.path.isfile(arquivo_exemplo_cliente) and os.path.getsize(arquivo_exemplo_cliente) > 0:
+        with open(arquivo_exemplo_cliente, "rb") as arquivo_pdf_exemplo:
+            pdf_demo_bytes = arquivo_pdf_exemplo.read()
+except (OSError, PermissionError):
+    pass
+
 # ==========================================
 # 6. BARRA LATERAL (SIDEBAR LIMPA)
 # ==========================================
@@ -1083,18 +1105,16 @@ if chave_groq_configurada:
 
 with st.sidebar:
     if logo_b64:
-        st.markdown(f'<div style="text-align: center; margin-bottom: 5px;"><img src="data:image/gif;base64,{logo_b64}" width="180"></div>', unsafe_allow_html=True)
+        st.markdown(f'<div style="text-align: center; margin-bottom: 12px;"><img src="data:image/gif;base64,{logo_b64}" width="180"></div>', unsafe_allow_html=True)
     else:
         st.markdown('<h1 style="font-size: 32px; text-align: center; margin-bottom: 0px;"><span style="color: #FF007A;"><span style="font-weight: 900;">NOVUS</span> <span style="font-weight: 300;">AI</span></span></h1>', unsafe_allow_html=True)
 
-    st.markdown("<p style='text-align: center; color: #94A3B8; font-size: 13px; margin-bottom: 20px;'>Inteligência Estratégica</p>", unsafe_allow_html=True)
+    st.markdown("<p style='text-align: center; color: #94A3B8; font-size: 13px; margin-bottom: 12px;'>Inteligência Estratégica</p>", unsafe_allow_html=True)
     
     st.markdown(
-        "<div style='background-color: #13131A; border: 1px solid #1E1E26; border-radius: 8px; padding: 16px; margin-bottom: 20px;'>"
-        f"<div style='color: #FF8A00; font-weight: 800; margin-bottom: 6px; font-size: 13px; display: flex; align-items: center;'>{ICO_LOCK} Privacidade configurada</div>"
-        "<div style='color: #94A3B8; font-size: 12px; line-height: 1.4;'>Processamento neural seguro.</div>"
-        "</div>", 
-        unsafe_allow_html=True
+        f"<div class='privacy-card'><div class='privacy-card-title'>{ICO_LOCK} Privacidade configurada</div>"
+        "<div class='privacy-card-copy'>Processamento neural seguro.</div></div>",
+        unsafe_allow_html=True,
     )
 
 
@@ -1147,7 +1167,7 @@ with aba_auditoria:
     with col_up2:
         st.markdown("<div style='margin-top: 32px;'></div>", unsafe_allow_html=True)
         st.markdown("<div class='btn-secundario'>", unsafe_allow_html=True)
-        st.download_button(label="Baixar Relatório de Exemplo", data=pdf_demo_bytes, file_name="Exemplo_Relatorio_NOVUS.pdf", mime="application/pdf", use_container_width=True)
+        st.download_button(label="Baixar Relatório de Exemplo", data=pdf_demo_bytes, file_name="Exemplo_Relatorio_NOVUS_AI.pdf", mime="application/pdf", use_container_width=True)
         st.markdown("</div>", unsafe_allow_html=True)
 
     if arquivo_cliente is not None:
@@ -1444,11 +1464,11 @@ with aba_auditoria:
 st.markdown("<br><br><hr style='border-color: #1E1E26; margin-bottom: 30px;'>", unsafe_allow_html=True)
 
 html_rodape = (
-    '<div style="display: flex; justify-content: center; gap: 24px; flex-wrap: wrap; margin-bottom: 30px;">'
-    f'<div class="badge" style="margin-bottom: 0; min-width: 200px;">{ICO_CHECK}<div><b>Ambiente Seguro</b><br><span style="font-size:10px; color:#64748B;">Transporte protegido pela infraestrutura de hospedagem</span></div></div>'
-    f'<div class="badge" style="margin-bottom: 0; min-width: 200px;">{ICO_SHIELD}<div><b>Privacidade de dados</b><br><span style="font-size:10px; color:#64748B;">Consulte a política de tratamento</span></div></div>'
-    f'<div class="badge" style="margin-bottom: 0; min-width: 200px;">{ICO_STAR}<div><b>Qualidade Verificada</b><br><span style="font-size:10px; color:#64748B;">Auditoria avançada por IA</span></div></div>'
-    f'<div class="badge" style="margin-bottom: 0; min-width: 200px;">{ICO_MP}<div><b>Pagamento Oficial</b><br><span style="font-size:10px; color:#64748B;">Processado por Mercado Pago</span></div></div>'
+    '<div class="footer-badges">'
+    f'<div class="badge footer-badge">{ICO_CHECK}<div class="footer-badge-copy"><b>Ambiente Seguro</b><span>Transporte protegido pela infraestrutura de hospedagem</span></div></div>'
+    f'<div class="badge footer-badge">{ICO_SHIELD}<div class="footer-badge-copy"><b>Privacidade de dados</b><span>Consulte a política de tratamento</span></div></div>'
+    f'<div class="badge footer-badge">{ICO_STAR}<div class="footer-badge-copy"><b>Qualidade Verificada</b><span>Auditoria avançada por IA</span></div></div>'
+    f'<div class="badge footer-badge">{ICO_MP}<div class="footer-badge-copy"><b>Pagamento Oficial</b><span>Processado por Mercado Pago</span></div></div>'
     '</div>'
 )
 st.markdown(html_rodape, unsafe_allow_html=True)
