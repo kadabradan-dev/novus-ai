@@ -835,6 +835,13 @@ st.markdown(
     .privacy-card-title { display: flex; align-items: center; gap: 6px; color: #FF8A00; font-weight: 800; font-size: 13px; line-height: 1.2; }
     .privacy-card-title svg { flex: 0 0 20px; width: 20px !important; height: 20px !important; margin: 0 !important; }
     .privacy-card-copy { margin: 7px 0 0 26px; color: #94A3B8; font-size: 12px; line-height: 1.4; }
+    .trust-panel { background: linear-gradient(135deg, rgba(19,19,26,.96), rgba(26,26,36,.96)); border: 1px solid #2A2A35; border-radius: 12px; padding: 18px 20px; margin: 28px 0 12px; }
+    .trust-panel-title { color: #E2E8F0; font-size: 16px; font-weight: 800; margin-bottom: 6px; }
+    .trust-panel-intro { color: #94A3B8; font-size: 13px; line-height: 1.55; margin-bottom: 0; }
+    .upload-privacy-note { background: rgba(255,138,0,.06); border: 1px solid rgba(255,138,0,.24); border-radius: 8px; color: #CBD5E1; font-size: 12px; line-height: 1.45; padding: 10px 12px; margin: 0 0 12px; }
+    .trust-panel strong { color: #E2E8F0; }
+    .trust-panel h4 { color: #FF8A00; font-size: 13px; margin: 4px 0 5px; }
+    .trust-panel p { color: #CBD5E1; font-size: 12px; line-height: 1.55; margin: 0 0 12px; }
     @media (max-width: 768px) { .footer-badge { flex-basis: min(100%, 320px); width: min(100%, 320px); } }
     </style>
     """,
@@ -1142,6 +1149,46 @@ with aba_sobre:
     with col3:
         st.markdown(f'<div class="feature-card"><div class="feature-content"><div class="feature-title">{ICO_LOCK} Segurança Local</div><div class="feature-desc">Processamento realizado conforme a configuração do ambiente. Consulte a política de dados antes de enviar informações sensíveis.</div></div><div class="feature-stat">{ICO_LOCK_SM} Dados sob política de acesso</div></div>', unsafe_allow_html=True)
 
+    st.markdown(
+        '<div class="trust-panel">'
+        '<div class="trust-panel-title">{ICO_SHIELD} Confiança e transparência</div>'
+        '<p class="trust-panel-intro">Antes de usar o NOVUS AI, veja de forma simples como a plataforma trata os dados enviados, o que o relatório entrega e como pedir ajuda.</p>'
+        '</div>'.format(ICO_SHIELD=ICO_SHIELD),
+        unsafe_allow_html=True,
+    )
+    with st.expander("Política de privacidade", expanded=False):
+        st.markdown(
+            """
+            **O que é enviado:** o NOVUS AI recebe a planilha CSV que você escolhe para calcular indicadores e montar o relatório.
+
+            **O que você não deve enviar:** senhas, dados bancários, documentos pessoais, dados de cartão ou informações que não sejam necessárias para a análise.
+
+            **Pagamento:** o pagamento é processado pelo Mercado Pago. O NOVUS AI não solicita senha bancária nem dados de cartão dentro do aplicativo.
+
+            **Responsabilidade pelo conteúdo:** envie somente dados que você pode utilizar e remova informações pessoais desnecessárias antes do upload.
+            """
+        )
+    with st.expander("Termos de uso", expanded=False):
+        st.markdown(
+            """
+            O NOVUS AI oferece uma análise automatizada de indicadores de vendas e rentabilidade. O relatório é uma ferramenta de apoio gerencial e não substitui orientação contábil, financeira ou jurídica.
+
+            A qualidade da análise depende da exatidão e da estrutura da planilha enviada. Os resultados devem ser conferidos pelo responsável pela empresa antes de qualquer decisão.
+
+            A compra libera o relatório referente à análise realizada conforme o fluxo apresentado no site. O processamento e o pagamento seguem as condições exibidas no checkout oficial do Mercado Pago.
+            """
+        )
+    with st.expander("Suporte", expanded=False):
+        st.markdown(
+            "Se precisar de ajuda, utilize o canal de contato informado no momento da compra e mencione o e-mail usado no pedido. Não envie senhas, tokens ou dados bancários pelo suporte."
+        )
+        email_suporte = obter_configuracao("NOVUS_SUPPORT_EMAIL")
+        if email_suporte:
+            st.markdown(f"Contato: [{email_suporte}](mailto:{email_suporte})")
+        else:
+            st.caption("O contato de suporte poderá ser configurado futuramente pelos Secrets, sem alterar o aplicativo.")
+    st.caption("Texto informativo sobre o funcionamento da plataforma; recomenda-se revisão jurídica antes de uma operação comercial em escala.")
+
 with aba_auditoria:
     st.markdown('<div id="novus-auditoria-topo"></div>', unsafe_allow_html=True)
     st.markdown('<h1 class="gradient-text" style="font-weight: 900; font-size: 38px;">Descubra o seu Lucro Oculto</h1>', unsafe_allow_html=True)
@@ -1160,6 +1207,11 @@ with aba_auditoria:
     st.markdown(html_infografico, unsafe_allow_html=True)
 
     st.markdown("<hr style='border-color: #1E1E26; margin-bottom: 30px;'><br>", unsafe_allow_html=True)
+
+    st.markdown(
+        '<div class="upload-privacy-note"><strong>Privacidade:</strong> envie somente os dados necessários para a análise. Não inclua senhas, dados bancários, dados de cartão ou documentos pessoais.</div>',
+        unsafe_allow_html=True,
+    )
 
     col_up1, col_up2 = st.columns([3, 1])
     with col_up1:
