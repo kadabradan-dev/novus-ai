@@ -978,7 +978,8 @@ class PDF(FPDF):
         self.cell(0, 9, self._texto_pdf("NOVUS AI - AUDITORIA EXECUTIVA"), 0, 1, "C")
         self.set_draw_color(30, 30, 38)
         self.line(10, 24, 200, 24)
-        self.ln(3)
+        # Reserva espaço abaixo da linha para que o primeiro parágrafo nunca fique sobreposto.
+        self.set_y(30)
 
     def footer(self):
         self.set_y(-15)
